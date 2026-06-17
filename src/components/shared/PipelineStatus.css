@@ -1,0 +1,149 @@
+.pipeline-card { /* inherits .card */ }
+
+.pipeline-body {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px;
+}
+
+.pipeline-step-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.pipeline-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  transition: all 0.25s ease;
+}
+
+/* States */
+.step-pending {
+  opacity: 0.38;
+}
+
+.step-active {
+  background: var(--accent-dim);
+  border: 1px solid rgba(56,189,248,0.2);
+  opacity: 1;
+}
+
+.step-done {
+  opacity: 0.75;
+}
+
+.step-done:hover {
+  opacity: 1;
+  background: var(--success-dim);
+}
+
+/* Indicator */
+.step-indicator {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  transition: all 0.2s ease;
+}
+
+.step-pending .step-indicator {
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  color: var(--text-muted);
+}
+
+.step-active .step-indicator {
+  background: var(--accent);
+  border: none;
+  color: #000;
+}
+
+.step-done .step-indicator {
+  background: var(--success);
+  border: none;
+  color: #000;
+}
+
+.step-num { line-height: 1; }
+
+/* Mini spinner inside indicator */
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.step-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(0,0,0,0.2);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* Step icon */
+.step-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.step-active .step-icon { color: var(--accent); }
+.step-done .step-icon   { color: var(--success); }
+
+/* Step text */
+.step-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.step-label {
+  font-size: 0.81rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  line-height: 1.2;
+}
+
+.step-active .step-label { color: var(--text-primary); }
+.step-done .step-label   { color: var(--text-secondary); }
+
+.step-desc {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+/* Connector line */
+.pipeline-connector {
+  width: 1.5px;
+  height: 12px;
+  background: var(--border);
+  margin-left: 21px;
+  transition: background 0.3s ease;
+}
+
+.connector-done {
+  background: var(--success);
+  opacity: 0.5;
+}
+
+/* Pulse dot for active badge */
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.6); }
+}
+
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 1.2s ease-in-out infinite;
+}

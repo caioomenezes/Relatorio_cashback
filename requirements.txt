@@ -1,0 +1,10 @@
+pandas
+streamlit
+plotly
+openai
+gspread
+oauth2client
+python-dotenv
+fastapi
+uvicorn[standard]
+python-multipart
