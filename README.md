@@ -68,6 +68,17 @@ O botão "Exportar PDF" do relatório gera um PDF a partir da própria tela do r
 
 ## Como rodar o projeto localmente
 
+## Configuração das credenciais do Google Sheets
+
+A funcionalidade "Inserir na Planilha" depende de uma chave de service account do Google. Por segurança, esse arquivo **não está versionado no repositório**, mas a estrutura já está pronta.
+
+### Passo a passo
+
+1. O conteudo do arquivo `credentials.json` está localizado no docs: https://docs.google.com/document/d/1EgtVykqgtsxkUsGyaVlE0yHAlRtkQwBVCPf2-Ylcs1M/edit?usp=sharing
+2. Cole o conteúdo JSON disponivel no documento docs e cole dentro do arquivo `backend/credentials.json`, que já existe no repositório com a estrutura esperada
+
+OBS: Caso esse passo a passo não seja seguido, ao clicar no botao de "Inserir na planilha" o backend retornará ERROR 500
+
 ### Pré-requisitos
 
 - Python 3.10+ instalado
@@ -75,7 +86,7 @@ O botão "Exportar PDF" do relatório gera um PDF a partir da própria tela do r
 
 ### 1. Backend (FastAPI)
 
-Crie e ative um ambiente virtual Python na raiz do projeto:
+Após realizar o passo a passo da planilha, crie e ative um ambiente virtual Python na raiz do projeto:
 
 ```bash
 # Windows
