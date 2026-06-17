@@ -1,13 +1,12 @@
-
 # Analisador A/B de Cashback
 
-Aplicação web para analisar experimentos A/B de campanhas de cashback. O usuário faz upload de um CSV com os dados do experimento, o sistema calcula as métricas de cada grupo, aponta qual variante teve melhor desempenho, gera um resumo em linguagem natural e permite exportar tudo em um PDF ou registrar o resultado em uma planilha.
+Este repositório é referente a uma aplicação web desenvolvida para analisar experimentos A/B de campanhas de cashback. O usuário faz upload de um CSV com os dados do experimento, o sistema calcula as métricas de cada grupo, aponta qual variante teve melhor desempenho, gera um resumo em linguagem natural e permite exportar tudo em um PDF ou registrar o resultado em uma planilha.
 
 Este README cobre a versão web do projeto: backend em **FastAPI** (`backend/`) e frontend em **React** (raiz do repositório, rodado com `npm run dev`).
 
 ## Por que este projeto existe
 
-Times de growth e marketing rodam testes A/B de cashback com frequência, mas normalmente dependem de alguém com conhecimento técnico (ou de planilhas manuais) para transformar um CSV de exportação em uma decisão clara: qual variante venceu e por quê. Este projeto automatiza essa ponte — da planilha bruta até a recomendação final — e foi pensado desde o início para que **pessoas sem conhecimento técnico também consigam gerar e interpretar o relatório**, sem depender de outra pessoa para traduzir os números.
+Assim como foi repassado no teste, times de growth e marketing rodam testes A/B de cashback com frequência, mas normalmente dependem de alguém com conhecimento técnico (ou de planilhas manuais) para transformar um CSV de exportação em uma decisão clara: qual variante venceu e por quê. Este projeto automatiza essa ponte ( da planilha bruta até a recomendação final ) e foi pensado desde o início para que **pessoas sem conhecimento técnico também consigam gerar e interpretar o relatório**, sem depender de outra pessoa para traduzir os números.
 
 Isso aparece em duas decisões concretas do projeto, detalhadas mais abaixo: o glossário de métricas embutido no relatório, e a exportação em PDF pronta para repasse.
 
@@ -29,50 +28,43 @@ Todas essas métricas derivadas vivem em `models/entities.py` (classe `GroupStat
 
 ## Por que ROI é a métrica principal de decisão
 
-Entre as métricas calculadas, o **ROI** foi escolhido como critério principal para apontar o grupo vencedor, em vez de métricas absolutas como GMV ou receita líquida em reais. A razão é que ROI mede **eficiência do investimento**: quanto retorno em receita líquida cada real gasto em cashback gerou, e não o tamanho do grupo.
+Essa é uma importante decisão tomada para esse projeto. Entre as métricas calculadas, o **ROI** foi escolhido como critério principal para apontar o grupo vencedor, em vez de métricas absolutas como GMV ou receita líquida em reais. A razão é que ROI mede **eficiência do investimento**: quanto retorno em receita líquida cada real gasto em cashback gerou, e não o tamanho do grupo.
 
 Isso é importante porque GMV e receita líquida absoluta tendem a favorecer naturalmente o grupo com mais usuários ou mais tráfego, mesmo que esse grupo seja menos eficiente por usuário. O ROI normaliza essa diferença e permite comparar grupos de tamanhos distintos pela mesma régua, respondendo à pergunta que realmente importa para quem vai decidir o orçamento: "se eu escalar este grupo, cada real adicional de cashback vai continuar valendo a pena?"
 
 ## Identificação de possíveis erros nos dados
 
-Antes de qualquer decisão ser tomada com base nos números, o sistema roda uma verificação automática de anomalias nos dados recebidos (função `detectAnomalies`, no componente `ReportSection`). Ela cobre, entre outros, os seguintes casos:
+Antes de qualquer decisão ser tomada com base nos números, o sistema roda uma verificação automática de anomalias nos dados recebidos. Essa verificação acontece em duas camadas: uma no backend, durante a validação do CSV, e outra no frontend, após as métricas serem calculadas.
 
-- Avisos repassados pelo próprio backend durante a validação do CSV (ex: coluna de cashback ausente).
-- Cashback de um grupo idêntico à sua comissão — sinal comum de erro de origem, como uma coluna duplicada por engano, que zeraria a receita líquida e o ROI daquele grupo.
-- Receita líquida negativa, indicando que o cashback pago superou a comissão gerada.
-- ROI igual a zero mesmo com comissão positiva, o que pode indicar um problema no cálculo ou nos dados de cashback daquele grupo.
-- Grupos com usuários cadastrados mas nenhum comprador, indicando conversão zerada.
-- Lifts (variações percentuais) extremos entre grupos, acima de 200%, que costumam apontar para amostras desproporcionais ou erro de dado, não para um resultado real.
+### Camada 1 — Validação no backend
 
-Esses avisos aparecem em um card próprio do relatório ("Avisos da Análise") e não bloqueiam a análise — servem para que quem for tomar a decisão saiba investigar a origem dos dados antes de agir sobre eles.
+Quando o CSV é enviado ao endpoint `/analyze`, o pipeline valida a estrutura do arquivo antes de calcular qualquer métrica. Se algum problema for detectado nessa etapa — como a ausência da coluna de cashback — o backend devolve um aviso junto com o resultado. Esses avisos são repassados diretamente para o card de "Avisos da Análise" no relatório.
+
+### Camada 2 — Detecção de anomalias no frontend
+
+É importante destacar que com o objetivo de tentar mitigar o impacto de dados ruidosos e ruins, a aplicação, após receber as métricas calculadas, o componente `ReportSection` roda a função `detectAnomalies`, que verifica os seguintes casos por grupo:
+
+**Cashback idêntico à comissão** - quando o cashback de um grupo é numericamente igual à comissão (diferença menor que R$ 0,01), o sistema emite um alerta de nível crítico. Esse padrão costuma indicar que a coluna de cashback foi preenchida com os valores da coluna de comissão por engano, o que zeraria a receita líquida e o ROI daquele grupo e tornaria qualquer comparação inválida.
+
+**Receita líquida negativa** - quando o cashback pago supera a comissão gerada, a receita líquida fica negativa. O sistema sinaliza isso como crítico, pois significa que o grupo custou mais do que gerou no período analisado.
+
+**ROI zero com comissão positiva** - quando um grupo tem comissão maior que zero mas ROI igual a zero (e o cashback não é idêntico à comissão), o sistema emite um aviso de investigação. Esse estado pode indicar um erro no cálculo do denominador no backend ou um problema na origem dos dados de cashback daquele grupo.
+
+**Conversão zerada com usuários cadastrados** - quando um grupo tem usuários registrados mas nenhum comprador, a taxa de conversão é zero. O sistema sinaliza isso como aviso, pois pode indicar um erro de segmentação, um problema no join entre as tabelas de usuários e pedidos, ou simplesmente um grupo que não foi exposto à campanha.
+
+**Lifts extremos entre grupos** - quando a variação percentual de qualquer métrica entre um grupo e o controle ultrapassa 200%, o sistema emite um aviso. Lifts desse tamanho raramente refletem um resultado real, na maioria dos casos apontam para amostras de tamanhos muito desproporcionais ou para um erro nos dados de um dos grupos.
+
+### Como os avisos aparecem
+
+Todos os avisos são exibidos em um card dedicado ("Avisos da Análise") dentro do relatório, separado dos resultados principais. Os avisos de nível crítico (cashback idêntico à comissão e receita negativa) aparecem em vermelho; os de nível investigativo aparecem em amarelo. Nenhum aviso bloqueia a análise, eles existem para que quem for tomar a decisão saiba o que investigar na origem dos dados antes de agir sobre os números.
 
 ## Glossário de métricas no relatório
 
-Cada métrica que aparece no relatório também é explicada dentro do próprio relatório, em um card de "Glossário de Métricas": para cada uma, o sistema mostra o que ela é (a fórmula, em linguagem simples) e para que ela serve (como interpretá-la na prática). Essa decisão existe justamente para que alguém sem bagagem técnica em growth ou estatística consiga abrir o relatório e entender, sozinho, o que está sendo medido e por que o sistema recomendou um grupo em vez de outro — sem precisar perguntar para outra pessoa o que "ROI" ou "margem" significam ali.
+Cada métrica que aparece no relatório também é explicada dentro do próprio relatório, em um card de "Glossário de Métricas": para cada uma, o sistema mostra o que ela é (a fórmula, em linguagem simples) e para que ela serve (como interpretá-la na prática). Essa decisão existe justamente para que alguém sem bagagem técnica em growth ou estatística consiga abrir o relatório e entender, sozinho, o que está sendo medido e por que o sistema recomendou um grupo em vez de outro, sem precisar perguntar para outra pessoa o que "ROI" ou "margem" significam ali.
 
 ## Exportação em PDF
 
 O botão "Exportar PDF" do relatório gera um PDF a partir da própria tela do relatório (incluindo o resumo dos resultados, os avisos de anomalias e o glossário de métricas). Isso é parte da mesma decisão de projeto: como o PDF é uma cópia fiel do que aparece na tela — explicações incluídas — ele pode ser repassado para qualquer pessoa (um gestor, um parceiro, alguém de outra área) sem que essa pessoa precise ter acesso ao sistema ou conhecimento técnico prévio para entender o conteúdo. O relatório se explica por si só.
-
-## Estrutura do projeto
-
-```
-ab-cashback/
-├── backend/
-│   ├── api_server.py      # API FastAPI — endpoints /analyze, /report, /append
-│   └── sheets.py          # Escrita de resultados no Google Sheets
-├── core/                  # Pipeline de análise (validação, cálculo de métricas)
-├── models/
-│   └── entities.py        # Estruturas de dados (GroupStats, MetricsResult, etc.)
-├── components/
-│   ├── report/
-│   │   └── ReportSection.jsx   # Relatório, glossário de métricas e exportação em PDF
-│   └── dashboard/
-│       └── MetricsDashboard.jsx
-├── App.jsx                # Componente raiz do frontend
-├── requirements.txt       # Dependências Python (backend)
-└── package.json           # Dependências e scripts do frontend (React)
-```
 
 ## Como rodar o projeto localmente
 
@@ -112,7 +104,7 @@ A API ficará disponível em `http://localhost:8000`.
 
 ### 2. Frontend (React)
 
-Em outro terminal, na raiz do projeto (`ab-cashback/`):
+Em outro terminal, na raiz do projeto:
 
 ```bash
 npm install
@@ -129,4 +121,15 @@ O frontend abre normalmente em `http://localhost:5173` (verifique a saída do co
 2. O frontend envia o arquivo para `/analyze`, que valida os dados e calcula as métricas por grupo.
 3. O relatório é montado na tela: resumo dos resultados, avisos de possíveis erros nos dados e o glossário de métricas.
 4. O usuário pode exportar esse relatório como PDF ou registrar o resultado (grupo vencedor, ROI e receita líquida) em uma planilha, pelo botão "Inserir na Planilha".
->>>>>>> af7be23deb136dea55a04ce02a522d4d4aec9ec9
+   
+## Arquivos complementares
+
+A seguir, estão os links referentes a planilha de resultados alimentada pela aplicação e um vídeo de demonstração do funcionamento da aplicação:
+
+https://docs.google.com/spreadsheets/d/1Fjjbyox2p89cU-8F0T2IA3CqakdmRbQ5aq8hGpKKL-o/edit?usp=sharing
+
+https://drive.google.com/file/d/1f25lRUgAIcpNRCOALqJkaMsbxmGFfvJG/view?usp=sharing
+
+
+
+ 
