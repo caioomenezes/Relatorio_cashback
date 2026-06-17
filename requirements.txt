@@ -1,7 +1,6 @@
 pandas
-streamlit
-plotly
-openai
+numpy
+pydantic
 gspread
 oauth2client
 python-dotenv
